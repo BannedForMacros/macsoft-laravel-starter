@@ -12,12 +12,13 @@ export interface Empresa extends Record<string, unknown> {
     updated_at: string;
 }
 
-export interface Local {
+export interface Local extends Record<string, unknown> {
     id: number;
     empresa_id: number;
     nombre: string;
     direccion: string | null;
     telefono: string | null;
+    tipo: string | null;
     es_principal: boolean;
     activo: boolean;
     empresa?: Empresa;
@@ -25,7 +26,7 @@ export interface Local {
     updated_at: string;
 }
 
-export interface Rol {
+export interface Rol extends Record<string, unknown> {
     id: number;
     empresa_id: number;
     nombre: string;
@@ -38,7 +39,7 @@ export interface Rol {
     updated_at: string;
 }
 
-export interface Modulo {
+export interface Modulo extends Record<string, unknown> {
     id: number;
     padre_id: number | null;
     nombre: string;
@@ -53,7 +54,7 @@ export interface Modulo {
     updated_at: string;
 }
 
-export interface Permiso {
+export interface Permiso extends Record<string, unknown> {
     id: number;
     rol_id: number;
     modulo_id: number;
@@ -66,7 +67,7 @@ export interface Permiso {
     updated_at: string;
 }
 
-export interface User {
+export interface User extends Record<string, unknown> {
     id: number;
     empresa_id: number;
     local_id: number | null;

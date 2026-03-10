@@ -4,11 +4,13 @@ import toast from 'react-hot-toast';
 import AppLayout from '@/Layouts/AppLayout';
 import PageHeader from '@/Components/UI/PageHeader';
 import Button from '@/Components/UI/Button';
-import Table from '@/Components/UI/Table';
+import Table, { Column } from '@/Components/UI/Table';
 import Modal from '@/Components/UI/Modal';
 import Badge from '@/Components/UI/Badge';
 import Input from '@/Components/UI/Input';
 import Select from '@/Components/UI/Select';
+import Checkbox from '@/Components/UI/Checkbox';
+import TableActions from '@/Components/UI/TableActions';
 import type { Empresa, PageProps, Rol } from '@/types';
 
 interface Props extends PageProps {
@@ -24,26 +26,32 @@ type FormData = {
     activo: boolean;
 };
 
+const emptyForm: FormData = {
+    empresa_id: '',
+    nombre: '',
+    descripcion: '',
+    es_admin: false,
+    activo: true,
+};
+
 export default function Roles({ roles, empresas }: Props) {
     const { flash } = usePage<Props>().props;
     const [modalOpen, setModalOpen] = useState(false);
     const [confirmId, setConfirmId] = useState<number | null>(null);
     const [editing, setEditing] = useState<Rol | null>(null);
 
-    const { data, setData, post, put, processing, errors, reset } = useForm<FormData>({
-        empresa_id: '',
-        nombre: '',
-        descripcion: '',
-        es_admin: false,
-        activo: true,
-    });
+    const { data, setData, post, put, processing, errors, reset } = useForm<FormData>(emptyForm);
 
     useEffect(() => {
         if (flash?.success) toast.success(flash.success);
         if (flash?.error) toast.error(flash.error);
     }, [flash]);
 
-    function openCreate() { setEditing(null); reset(); setModalOpen(true); }
+    function openCreate() {
+        setEditing(null);
+        reset();
+        setModalOpen(true);
+    }
 
     function openEdit(rol: Rol) {
         setEditing(rol);
@@ -60,11 +68,78 @@ export default function Roles({ roles, empresas }: Props) {
     function submit(e: React.FormEvent) {
         e.preventDefault();
         if (editing) {
-            put(route('configuracion.roles.update', editing.id), { onSuccess: () => { setModalOpen(false); reset(); } });
+            put(route('configuracion.roles.update', editing.id), {
+                onSuccess: () => { setModalOpen(false); reset(); },
+            });
         } else {
-            post(route('configuracion.roles.store'), { onSuccess: () => { setModalOpen(false); reset(); } });
+            post(route('configuracion.roles.store'), {
+                onSuccess: () => { setModalOpen(false); reset(); },
+            });
         }
     }
+
+    function destroy(id: number) {
+        setConfirmId(null);
+        router.delete(route('configuracion.roles.destroy', id));
+    }
+
+    const empresaOptions = empresas.map(e => ({
+        value: String(e.id),
+        label: e.nombre_comercial ?? e.razon_social,
+    }));
+
+    const columns: Column<Rol>[] = [
+        {
+            key: 'empresa',
+            label: 'Empresa',
+            sortable: true,
+            searchKey: 'empresa_id',
+            render: (rol) => rol.empresa
+                ? (rol.empresa.nombre_comercial ?? rol.empresa.razon_social)
+                : '—',
+        },
+        {
+            key: 'nombre',
+            label: 'Nombre',
+            sortable: true,
+            render: (rol) => <span className="font-medium">{rol.nombre}</span>,
+        },
+        {
+            key: 'descripcion',
+            label: 'Descripción',
+            render: (rol) => rol.descripcion ?? '—',
+        },
+        {
+            key: 'es_admin',
+            label: 'Admin Global',
+            sortable: true,
+            render: (rol) => (
+                <Badge variant={rol.es_admin ? 'warning' : 'secondary'}>
+                    {rol.es_admin ? 'Sí' : 'No'}
+                </Badge>
+            ),
+        },
+        {
+            key: 'activo',
+            label: 'Estado',
+            sortable: true,
+            render: (rol) => (
+                <Badge variant={rol.activo ? 'success' : 'secondary'}>
+                    {rol.activo ? 'Activo' : 'Inactivo'}
+                </Badge>
+            ),
+        },
+        {
+            key: 'acciones',
+            label: 'Acciones',
+            render: (rol) => (
+                <TableActions
+                    onEdit={() => openEdit(rol)}
+                    onDelete={() => setConfirmId(rol.id)}
+                />
+            ),
+        },
+    ];
 
     return (
         <AppLayout title="Roles">
@@ -74,42 +149,14 @@ export default function Roles({ roles, empresas }: Props) {
                 actions={<Button onClick={openCreate}>+ Nuevo Rol</Button>}
             />
 
-            <Table>
-                <Table.Head>
-                    <Table.Row>
-                        <Table.Th>Empresa</Table.Th>
-                        <Table.Th>Nombre</Table.Th>
-                        <Table.Th>Admin Global</Table.Th>
-                        <Table.Th>Estado</Table.Th>
-                        <Table.Th>Acciones</Table.Th>
-                    </Table.Row>
-                </Table.Head>
-                <Table.Body>
-                    {roles.length === 0 ? <Table.Empty /> : roles.map(rol => (
-                        <Table.Row key={rol.id}>
-                            <Table.Td>{rol.empresa?.nombre_comercial ?? rol.empresa?.razon_social}</Table.Td>
-                            <Table.Td className="font-medium">{rol.nombre}</Table.Td>
-                            <Table.Td>
-                                <Badge variant={rol.es_admin ? 'warning' : 'secondary'}>
-                                    {rol.es_admin ? 'Sí' : 'No'}
-                                </Badge>
-                            </Table.Td>
-                            <Table.Td>
-                                <Badge variant={rol.activo ? 'success' : 'secondary'}>
-                                    {rol.activo ? 'Activo' : 'Inactivo'}
-                                </Badge>
-                            </Table.Td>
-                            <Table.Td>
-                                <div className="flex gap-2">
-                                    <Button variant="ghost" size="sm" onClick={() => openEdit(rol)}>Editar</Button>
-                                    <Button variant="danger" size="sm" onClick={() => setConfirmId(rol.id)}>Eliminar</Button>
-                                </div>
-                            </Table.Td>
-                        </Table.Row>
-                    ))}
-                </Table.Body>
-            </Table>
+            <Table
+                data={roles}
+                columns={columns}
+                searchPlaceholder="Buscar rol..."
+                emptyMessage="No hay roles registrados"
+            />
 
+            {/* Form Modal */}
             <Modal
                 isOpen={modalOpen}
                 onClose={() => setModalOpen(false)}
@@ -118,30 +165,57 @@ export default function Roles({ roles, empresas }: Props) {
                 footer={
                     <>
                         <Button variant="ghost" onClick={() => setModalOpen(false)}>Cancelar</Button>
-                        <Button loading={processing} onClick={submit}>{editing ? 'Guardar' : 'Crear'}</Button>
+                        <Button loading={processing} onClick={submit}>
+                            {editing ? 'Guardar cambios' : 'Crear rol'}
+                        </Button>
                     </>
                 }
             >
                 <form onSubmit={submit} className="space-y-4">
-                    <Select label="Empresa" required value={data.empresa_id} onChange={e => setData('empresa_id', e.target.value)} error={errors.empresa_id}>
-                        <option value="">Seleccione empresa</option>
-                        {empresas.map(e => <option key={e.id} value={e.id}>{e.razon_social}</option>)}
-                    </Select>
-                    <Input label="Nombre" required value={data.nombre} onChange={e => setData('nombre', e.target.value)} error={errors.nombre} />
-                    <Input label="Descripción" value={data.descripcion} onChange={e => setData('descripcion', e.target.value)} />
+                    <Select
+                        label="Empresa"
+                        required
+                        options={empresaOptions}
+                        value={data.empresa_id}
+                        onChange={(value) => setData('empresa_id', value as string)}
+                        placeholder="Seleccione empresa"
+                        error={errors.empresa_id}
+                    />
+                    <Input
+                        label="Nombre"
+                        required
+                        value={data.nombre}
+                        onChange={e => setData('nombre', e.target.value)}
+                        error={errors.nombre}
+                    />
+                    <Input
+                        label="Descripción"
+                        value={data.descripcion}
+                        onChange={e => setData('descripcion', e.target.value)}
+                        error={errors.descripcion}
+                    />
                     <div className="flex gap-6">
                         <label className="flex items-center gap-2 text-sm cursor-pointer" style={{ color: 'var(--color-text)' }}>
-                            <input type="checkbox" checked={data.es_admin} onChange={e => setData('es_admin', e.target.checked)} />
+                            <Checkbox
+                                name="es_admin"
+                                checked={data.es_admin}
+                                onChange={e => setData('es_admin', e.target.checked)}
+                            />
                             Admin global
                         </label>
                         <label className="flex items-center gap-2 text-sm cursor-pointer" style={{ color: 'var(--color-text)' }}>
-                            <input type="checkbox" checked={data.activo} onChange={e => setData('activo', e.target.checked)} />
-                            Activo
+                            <Checkbox
+                                name="activo"
+                                checked={data.activo}
+                                onChange={e => setData('activo', e.target.checked)}
+                            />
+                            Rol activo
                         </label>
                     </div>
                 </form>
             </Modal>
 
+            {/* Confirm Delete */}
             <Modal
                 isOpen={confirmId !== null}
                 onClose={() => setConfirmId(null)}
@@ -150,11 +224,13 @@ export default function Roles({ roles, empresas }: Props) {
                 footer={
                     <>
                         <Button variant="ghost" onClick={() => setConfirmId(null)}>Cancelar</Button>
-                        <Button variant="danger" onClick={() => { if (confirmId) { router.delete(route('configuracion.roles.destroy', confirmId)); setConfirmId(null); } }}>Eliminar</Button>
+                        <Button variant="danger" onClick={() => confirmId && destroy(confirmId)}>Eliminar</Button>
                     </>
                 }
             >
-                <p className="text-sm" style={{ color: 'var(--color-text)' }}>¿Eliminar este rol?</p>
+                <p className="text-sm" style={{ color: 'var(--color-text)' }}>
+                    ¿Estás seguro de que deseas eliminar este rol? Esta acción no se puede deshacer.
+                </p>
             </Modal>
         </AppLayout>
     );

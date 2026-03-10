@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
-import { router, useForm, usePage } from '@inertiajs/react';
+import { router, usePage } from '@inertiajs/react';
 import toast from 'react-hot-toast';
 import AppLayout from '@/Layouts/AppLayout';
 import PageHeader from '@/Components/UI/PageHeader';
 import Button from '@/Components/UI/Button';
 import Select from '@/Components/UI/Select';
+import Checkbox from '@/Components/UI/Checkbox';
 import type { Modulo, PageProps, Permiso, Rol } from '@/types';
 
 interface Props extends PageProps {
@@ -22,6 +23,8 @@ interface PermisoRow {
     eliminar: boolean;
 }
 
+const ACCIONES: Array<'ver' | 'crear' | 'editar' | 'eliminar'> = ['ver', 'crear', 'editar', 'eliminar'];
+
 export default function Permisos({ roles, modulos, rolSeleccionado, permisos }: Props) {
     const { flash } = usePage<Props>().props;
 
@@ -31,12 +34,11 @@ export default function Permisos({ roles, modulos, rolSeleccionado, permisos }: 
     }, [flash]);
 
     const [rolId, setRolId] = useState(rolSeleccionado ? String(rolSeleccionado.id) : '');
+    const [saving, setSaving] = useState(false);
 
-    // Build initial permiso map
-    const buildRows = (mods: Modulo[]): PermisoRow[] => {
+    function buildRows(mods: Modulo[]): PermisoRow[] {
         const rows: PermisoRow[] = [];
         mods.forEach(mod => {
-            // include the parent module too if it has a slug
             const existing = permisos.find(p => p.modulo_id === mod.id);
             rows.push({
                 modulo_id: mod.id,
@@ -59,16 +61,17 @@ export default function Permisos({ roles, modulos, rolSeleccionado, permisos }: 
             }
         });
         return rows;
-    };
+    }
 
     const [rows, setRows] = useState<PermisoRow[]>(() => buildRows(modulos));
-    const [saving, setSaving] = useState(false);
 
     useEffect(() => {
         setRows(buildRows(modulos));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [permisos, modulos]);
 
-    function changeRol(id: string) {
+    function changeRol(value: string | number) {
+        const id = String(value);
         setRolId(id);
         if (id) {
             router.get(route('configuracion.permisos.index'), { rol_id: id }, { preserveState: false });
@@ -80,9 +83,11 @@ export default function Permisos({ roles, modulos, rolSeleccionado, permisos }: 
     }
 
     function toggleAll(moduloId: number, value: boolean) {
-        setRows(prev => prev.map(r => r.modulo_id === moduloId
-            ? { ...r, ver: value, crear: value, editar: value, eliminar: value }
-            : r));
+        setRows(prev => prev.map(r =>
+            r.modulo_id === moduloId
+                ? { ...r, ver: value, crear: value, editar: value, eliminar: value }
+                : r
+        ));
     }
 
     function save() {
@@ -114,7 +119,10 @@ export default function Permisos({ roles, modulos, rolSeleccionado, permisos }: 
         return null;
     }
 
-    const accionCols: Array<'ver' | 'crear' | 'editar' | 'eliminar'> = ['ver', 'crear', 'editar', 'eliminar'];
+    const rolOptions = roles.map(r => ({
+        value: String(r.id),
+        label: `${r.nombre}${r.empresa ? ` (${r.empresa.nombre_comercial ?? r.empresa.razon_social})` : ''}`,
+    }));
 
     return (
         <AppLayout title="Permisos por Rol">
@@ -131,65 +139,81 @@ export default function Permisos({ roles, modulos, rolSeleccionado, permisos }: 
             <div className="mb-6 max-w-xs">
                 <Select
                     label="Seleccionar Rol"
+                    options={rolOptions}
                     value={rolId}
-                    onChange={e => changeRol(e.target.value)}
-                >
-                    <option value="">— Seleccione un rol —</option>
-                    {roles.map(r => (
-                        <option key={r.id} value={r.id}>
-                            {r.nombre} {r.empresa ? `(${r.empresa.nombre_comercial ?? r.empresa.razon_social})` : ''}
-                        </option>
-                    ))}
-                </Select>
+                    onChange={changeRol}
+                    placeholder="— Seleccione un rol —"
+                />
             </div>
 
             {rolSeleccionado && (
                 <div
-                    className="rounded border overflow-x-auto"
-                    style={{ borderColor: 'var(--color-border)', backgroundColor: 'var(--color-surface)' }}
+                    className="rounded-2xl border overflow-x-auto"
+                    style={{
+                        borderColor: 'var(--color-border)',
+                        backgroundColor: 'var(--color-surface)',
+                        boxShadow: '0 1px 4px 0 rgb(0 0 0 / 0.04)',
+                    }}
                 >
                     <table className="min-w-full divide-y" style={{ borderColor: 'var(--color-border)' }}>
                         <thead style={{ backgroundColor: 'var(--color-bg)' }}>
                             <tr>
-                                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--color-text-muted)', width: '40%' }}>Módulo</th>
-                                <th className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--color-text-muted)' }}>Todos</th>
-                                {accionCols.map(a => (
-                                    <th key={a} className="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide" style={{ color: 'var(--color-text-muted)' }}>
+                                <th
+                                    className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider"
+                                    style={{ color: 'var(--color-text-muted)', width: '40%' }}
+                                >
+                                    Módulo
+                                </th>
+                                <th
+                                    className="px-5 py-3 text-center text-xs font-semibold uppercase tracking-wider"
+                                    style={{ color: 'var(--color-text-muted)' }}
+                                >
+                                    Todos
+                                </th>
+                                {ACCIONES.map(a => (
+                                    <th
+                                        key={a}
+                                        className="px-5 py-3 text-center text-xs font-semibold uppercase tracking-wider"
+                                        style={{ color: 'var(--color-text-muted)' }}
+                                    >
                                         {a.charAt(0).toUpperCase() + a.slice(1)}
                                     </th>
                                 ))}
                             </tr>
                         </thead>
-                        <tbody className="divide-y" style={{ borderColor: 'var(--color-border)' }}>
-                            {rows.map(row => {
+                        <tbody>
+                            {rows.map((row, index) => {
                                 const padre = getPadreNombre(row.modulo_id);
                                 const nombre = getModuloNombre(row.modulo_id);
-                                const allChecked = accionCols.every(a => row[a]);
+                                const allChecked = ACCIONES.every(a => row[a]);
                                 return (
                                     <tr
                                         key={row.modulo_id}
+                                        style={{ borderTop: index !== 0 ? '1px solid var(--color-border)' : undefined }}
                                         onMouseEnter={e => (e.currentTarget.style.backgroundColor = 'var(--color-bg)')}
                                         onMouseLeave={e => (e.currentTarget.style.backgroundColor = '')}
                                     >
-                                        <td className="px-4 py-3 text-sm" style={{ color: 'var(--color-text)' }}>
-                                            {padre && <span className="text-xs mr-1" style={{ color: 'var(--color-text-muted)' }}>{padre} /</span>}
+                                        <td className="px-5 py-3.5 text-sm" style={{ color: 'var(--color-text)' }}>
+                                            {padre && (
+                                                <span className="text-xs mr-1" style={{ color: 'var(--color-text-muted)' }}>
+                                                    {padre} /
+                                                </span>
+                                            )}
                                             {nombre}
                                         </td>
-                                        <td className="px-4 py-3 text-center">
-                                            <input
-                                                type="checkbox"
+                                        <td className="px-5 py-3.5 text-center">
+                                            <Checkbox
+                                                name={`all_${row.modulo_id}`}
                                                 checked={allChecked}
                                                 onChange={e => toggleAll(row.modulo_id, e.target.checked)}
-                                                className="cursor-pointer"
                                             />
                                         </td>
-                                        {accionCols.map(a => (
-                                            <td key={a} className="px-4 py-3 text-center">
-                                                <input
-                                                    type="checkbox"
+                                        {ACCIONES.map(a => (
+                                            <td key={a} className="px-5 py-3.5 text-center">
+                                                <Checkbox
+                                                    name={`${a}_${row.modulo_id}`}
                                                     checked={row[a]}
                                                     onChange={() => toggle(row.modulo_id, a)}
-                                                    className="cursor-pointer"
                                                 />
                                             </td>
                                         ))}
@@ -203,8 +227,12 @@ export default function Permisos({ roles, modulos, rolSeleccionado, permisos }: 
 
             {!rolSeleccionado && (
                 <div
-                    className="rounded border p-12 text-center text-sm"
-                    style={{ borderColor: 'var(--color-border)', color: 'var(--color-text-muted)', backgroundColor: 'var(--color-surface)' }}
+                    className="rounded-2xl border p-12 text-center text-sm"
+                    style={{
+                        borderColor: 'var(--color-border)',
+                        color: 'var(--color-text-muted)',
+                        backgroundColor: 'var(--color-surface)',
+                    }}
                 >
                     Selecciona un rol para gestionar sus permisos.
                 </div>
