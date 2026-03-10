@@ -4,12 +4,13 @@ import toast from 'react-hot-toast';
 import AppLayout from '@/Layouts/AppLayout';
 import PageHeader from '@/Components/UI/PageHeader';
 import Button from '@/Components/UI/Button';
-import Table from '@/Components/UI/Table';
+import Table, { Column } from '@/Components/UI/Table';
 import Modal from '@/Components/UI/Modal';
 import Badge from '@/Components/UI/Badge';
 import Input from '@/Components/UI/Input';
-import Checkbox  from '@/Components/UI/Checkbox';
-import type { Empresa, Flash, PageProps } from '@/types';
+import Checkbox from '@/Components/UI/Checkbox';
+import TableActions from '@/Components/UI/TableActions';
+import type { Empresa, PageProps } from '@/types';
 
 interface Props extends PageProps {
     empresas: Empresa[];
@@ -86,6 +87,51 @@ export default function Empresas({ empresas }: Props) {
         router.delete(route('configuracion.empresas.destroy', id));
     }
 
+    const columns: Column<Empresa>[] = [
+        {
+            key: 'ruc',
+            label: 'RUC',
+            sortable: true,
+            render: (emp) => (
+                <span className="font-mono text-xs">{emp.ruc}</span>
+            ),
+        },
+        {
+            key: 'razon_social',
+            label: 'Razón Social',
+            sortable: true,
+            render: (emp) => (
+                <span className="font-medium">{emp.razon_social}</span>
+            ),
+        },
+        {
+            key: 'nombre_comercial',
+            label: 'Nombre Comercial',
+            sortable: true,
+            render: (emp) => emp.nombre_comercial ?? '—',
+        },
+        {
+            key: 'activo',
+            label: 'Estado',
+            sortable: true,
+            render: (emp) => (
+                <Badge variant={emp.activo ? 'success' : 'secondary'}>
+                    {emp.activo ? 'Activo' : 'Inactivo'}
+                </Badge>
+            ),
+        },
+        {
+            key: 'acciones',
+            label: 'Acciones',
+            render: (emp) => (
+                <TableActions
+                    onEdit={() => openEdit(emp)}
+                    onDelete={() => setConfirmId(emp.id)}
+                />
+            ),
+        },
+    ];
+
     return (
         <AppLayout title="Empresas">
             <PageHeader
@@ -94,41 +140,12 @@ export default function Empresas({ empresas }: Props) {
                 actions={<Button onClick={openCreate}>+ Nueva Empresa</Button>}
             />
 
-            <Table>
-                <Table.Head>
-                    <Table.Row>
-                        <Table.Th>RUC</Table.Th>
-                        <Table.Th>Razón Social</Table.Th>
-                        <Table.Th>Nombre Comercial</Table.Th>
-                        <Table.Th>Estado</Table.Th>
-                        <Table.Th>Acciones</Table.Th>
-                    </Table.Row>
-                </Table.Head>
-                <Table.Body>
-                    {empresas.length === 0 ? (
-                        <Table.Empty />
-                    ) : (
-                        empresas.map(emp => (
-                            <Table.Row key={emp.id}>
-                                <Table.Td className="font-mono text-xs">{emp.ruc}</Table.Td>
-                                <Table.Td className="font-medium">{emp.razon_social}</Table.Td>
-                                <Table.Td>{emp.nombre_comercial ?? '—'}</Table.Td>
-                                <Table.Td>
-                                    <Badge variant={emp.activo ? 'success' : 'secondary'}>
-                                        {emp.activo ? 'Activo' : 'Inactivo'}
-                                    </Badge>
-                                </Table.Td>
-                                <Table.Td>
-                                    <div className="flex gap-2">
-                                        <Button variant="ghost" size="sm" onClick={() => openEdit(emp)}>Editar</Button>
-                                        <Button variant="danger" size="sm" onClick={() => setConfirmId(emp.id)}>Eliminar</Button>
-                                    </div>
-                                </Table.Td>
-                            </Table.Row>
-                        ))
-                    )}
-                </Table.Body>
-            </Table>
+            <Table
+                data={empresas}
+                columns={columns}
+                searchPlaceholder="Buscar empresa..."
+                emptyMessage="No hay empresas registradas"
+            />
 
             {/* Form Modal */}
             <Modal
@@ -162,7 +179,7 @@ export default function Empresas({ empresas }: Props) {
                         <Checkbox
                             name="activo"
                             checked={data.activo}
-                            onChange={(e) => setData('activo', e.target.checked)}
+                            onChange={e => setData('activo', e.target.checked)}
                         />
                         Empresa activa
                     </label>

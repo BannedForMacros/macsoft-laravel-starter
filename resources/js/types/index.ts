@@ -1,4 +1,4 @@
-export interface Empresa {
+export interface Empresa extends Record<string, unknown> {
     id: number;
     razon_social: string;
     nombre_comercial: string | null;
