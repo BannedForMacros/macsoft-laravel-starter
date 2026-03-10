@@ -8,6 +8,7 @@ import Table from '@/Components/UI/Table';
 import Modal from '@/Components/UI/Modal';
 import Badge from '@/Components/UI/Badge';
 import Input from '@/Components/UI/Input';
+import Checkbox  from '@/Components/UI/Checkbox';
 import type { Empresa, Flash, PageProps } from '@/types';
 
 interface Props extends PageProps {
@@ -158,7 +159,11 @@ export default function Empresas({ empresas }: Props) {
                         <Input label="Teléfono" value={data.telefono} onChange={e => setData('telefono', e.target.value)} error={errors.telefono} />
                     </div>
                     <label className="flex items-center gap-2 text-sm cursor-pointer" style={{ color: 'var(--color-text)' }}>
-                        <input type="checkbox" checked={data.activo} onChange={e => setData('activo', e.target.checked)} />
+                        <Checkbox
+                            name="activo"
+                            checked={data.activo}
+                            onChange={(e) => setData('activo', e.target.checked)}
+                        />
                         Empresa activa
                     </label>
                 </form>

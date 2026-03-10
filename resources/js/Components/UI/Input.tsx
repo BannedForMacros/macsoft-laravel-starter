@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useId } from 'react';
 
 interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
     label?: string;
@@ -7,34 +7,54 @@ interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
 }
 
 export default function Input({ label, error, hint, required, className = '', ...props }: InputProps) {
+    const inputId = useId();
+
     return (
-        <div className="flex flex-col gap-1">
+        <div className="flex flex-col gap-1.5 w-full">
+            {/* Label */}
             {label && (
-                <label className="text-sm font-medium" style={{ color: 'var(--color-text)' }}>
+                <label 
+                    htmlFor={inputId}
+                    className="text-sm font-medium transition-colors" 
+                    style={{ color: error ? 'var(--color-danger)' : 'var(--color-text)' }}
+                >
                     {label}
-                    {required && <span className="ml-0.5 text-red-500">*</span>}
+                    {required && <span className="ml-1 text-red-500">*</span>}
                 </label>
             )}
-            <input
-                className={`rounded border px-3 py-2 text-sm outline-none transition-all duration-150 ${className}`}
-                style={{
-                    borderColor: error ? 'var(--color-danger)' : 'var(--color-border)',
-                    color: 'var(--color-text)',
-                    backgroundColor: 'var(--color-surface)',
-                }}
-                onFocus={e => {
-                    if (!error) e.currentTarget.style.borderColor = 'var(--color-primary)';
-                    e.currentTarget.style.boxShadow = `0 0 0 2px ${error ? 'rgba(239,68,68,0.15)' : 'rgba(59,130,246,0.15)'}`;
-                }}
-                onBlur={e => {
-                    e.currentTarget.style.borderColor = error ? 'var(--color-danger)' : 'var(--color-border)';
-                    e.currentTarget.style.boxShadow = '';
-                }}
-                required={required}
-                {...props}
-            />
-            {error && <p className="text-xs" style={{ color: 'var(--color-danger)' }}>{error}</p>}
-            {hint && !error && <p className="text-xs" style={{ color: 'var(--color-text-muted)' }}>{hint}</p>}
+
+            {/* Input Wrapper */}
+            <div className="relative w-full">
+                <input
+                    id={inputId}
+                    className={`
+                        w-full rounded-xl border-2 px-4 py-2.5 text-sm outline-none 
+                        transition-all duration-200 ease-in-out
+                        disabled:cursor-not-allowed disabled:opacity-50
+                        hover:opacity-90 hover:border-[var(--color-primary)]
+                        focus:border-[var(--color-primary)] focus:shadow-[0_0_0_3px_color-mix(in_srgb,var(--color-primary)_20%,transparent)]
+                        ${error ? '!border-[var(--color-danger)] focus:!shadow-[0_0_0_3px_color-mix(in_srgb,var(--color-danger)_20%,transparent)]' : 'border-[var(--color-border)]'}
+                        ${className}
+                    `}
+                    style={{
+                        backgroundColor: 'var(--color-surface)',
+                        color: 'var(--color-text)',
+                    }}
+                    required={required}
+                    {...props}
+                />
+            </div>
+
+            {/* Mensajes de Error o Ayuda */}
+            {error ? (
+                <p className="text-xs font-medium animate-in fade-in slide-in-from-top-1" style={{ color: 'var(--color-danger)' }}>
+                    {error}
+                </p>
+            ) : hint ? (
+                <p className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
+                    {hint}
+                </p>
+            ) : null}
         </div>
     );
 }

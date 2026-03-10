@@ -24,23 +24,47 @@ export default function Modal({ isOpen, onClose, title, size = 'md', children, f
     const [rendered, setRendered] = useState(false);
 
     useEffect(() => {
+        let rAF1: number;
+        let rAF2: number;
+        let exitTimer: ReturnType<typeof setTimeout>;
+
         if (isOpen) {
+            // 1. Montamos el componente en el DOM (opacity 0, scale 0.95)
             setRendered(true);
-            requestAnimationFrame(() => setVisible(true));
+            
+            // 2. Esperamos al primer frame para asegurar que el DOM inicial se pinte
+            rAF1 = requestAnimationFrame(() => {
+                // 3. En el siguiente frame, cambiamos a visible (opacity 1, scale 1) 
+                // para detonar la transición CSS
+                rAF2 = requestAnimationFrame(() => {
+                    setVisible(true);
+                });
+            });
         } else {
+            // 1. Iniciamos la transición de salida
             setVisible(false);
-            const timer = setTimeout(() => setRendered(false), 220);
-            return () => clearTimeout(timer);
+            
+            // 2. Esperamos a que termine la animación CSS (200ms + 20ms de margen) 
+            // antes de desmontar el componente del DOM
+            exitTimer = setTimeout(() => setRendered(false), 220); 
         }
+
+        // Limpieza para evitar fugas de memoria o errores si el componente se desmonta antes de tiempo
+        return () => {
+            if (rAF1) cancelAnimationFrame(rAF1);
+            if (rAF2) cancelAnimationFrame(rAF2);
+            if (exitTimer) clearTimeout(exitTimer);
+        };
     }, [isOpen]);
 
+    // Si no está renderizado, no devolvemos nada al DOM
     if (!rendered) return null;
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-            {/* Overlay */}
+            {/* Overlay (Fondo oscuro) */}
             <div
-                className="absolute inset-0 transition-opacity duration-200"
+                className="absolute inset-0 transition-opacity duration-200 ease-out"
                 style={{
                     backgroundColor: 'rgba(0,0,0,0.4)',
                     opacity: visible ? 1 : 0,
@@ -48,12 +72,12 @@ export default function Modal({ isOpen, onClose, title, size = 'md', children, f
                 onClick={onClose}
             />
 
-            {/* Panel */}
+            {/* Panel del Modal */}
             <div
-                className={`relative w-full ${sizeClasses[size]} rounded-lg shadow-xl transition-all duration-200 flex flex-col`}
+                className={`relative w-full ${sizeClasses[size]} rounded-lg shadow-xl transition-all duration-200 ease-out flex flex-col`}
                 style={{
-                    backgroundColor: 'var(--color-surface)',
-                    border: '1px solid var(--color-border)',
+                    backgroundColor: 'var(--color-surface, #ffffff)', // Fallback a blanco si no hay variable CSS
+                    border: '1px solid var(--color-border, #e5e7eb)',
                     opacity: visible ? 1 : 0,
                     transform: visible ? 'scale(1)' : 'scale(0.95)',
                     maxHeight: '90vh',
@@ -62,15 +86,16 @@ export default function Modal({ isOpen, onClose, title, size = 'md', children, f
                 {/* Header */}
                 <div
                     className="flex items-center justify-between px-5 py-4 border-b flex-shrink-0"
-                    style={{ borderColor: 'var(--color-border)' }}
+                    style={{ borderColor: 'var(--color-border, #e5e7eb)' }}
                 >
-                    <h3 className="text-base font-semibold" style={{ color: 'var(--color-text)' }}>
+                    <h3 className="text-base font-semibold" style={{ color: 'var(--color-text, #111827)' }}>
                         {title}
                     </h3>
                     <button
                         onClick={onClose}
-                        className="rounded p-1 transition-colors duration-150"
-                        style={{ color: 'var(--color-text-muted)' }}
+                        className="rounded p-1 transition-colors duration-150 hover:bg-black/5 dark:hover:bg-white/10"
+                        style={{ color: 'var(--color-text-muted, #6b7280)' }}
+                        aria-label="Cerrar modal"
                     >
                         <X size={18} />
                     </button>
@@ -85,7 +110,7 @@ export default function Modal({ isOpen, onClose, title, size = 'md', children, f
                 {footer && (
                     <div
                         className="flex items-center justify-end gap-2 px-5 py-4 border-t flex-shrink-0"
-                        style={{ borderColor: 'var(--color-border)' }}
+                        style={{ borderColor: 'var(--color-border, #e5e7eb)' }}
                     >
                         {footer}
                     </div>
